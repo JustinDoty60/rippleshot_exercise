@@ -2,6 +2,7 @@
 Take-home exercise for Rippleshot
 
 ### Note 
+- I removed the original README.md problem statement for confidentiality purposes
 - The directory `data_warehouse` contains the parquet files of interest.
 - The `Dockerfile` will allow you to run `pyspark` if you do not have it avaialble
 on your local system.
