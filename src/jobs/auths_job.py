@@ -23,7 +23,7 @@ initial_cols = [
     'Transaction Type',
     'Merchant Country',
     'Amount',
-    'merchant_name',
+    'merchant_name'
 ]
 
 
@@ -135,9 +135,11 @@ def add_partition_cols(df: DataFrame) -> DataFrame:
     :param df: Spark DataFrame
     :return: Spark DataFrame
     """
-    df = df.withColumn('year', year(col(Columns.TRANSMIT_TIME.value)))
-    df = df.withColumn('month', month(col(Columns.TRANSMIT_TIME.value)))
-    df = df.withColumn('day', dayofmonth(col(Columns.TRANSMIT_TIME.value)))
+    timestamp_col = Columns.TRANSMIT_TIME.value
+
+    df = df.withColumn('year', year(col(timestamp_col)))
+    df = df.withColumn('month', month(col(timestamp_col)))
+    df = df.withColumn('day', dayofmonth(col(timestamp_col)))
 
     return df
 
