@@ -1,0 +1,10 @@
+account_id	first_name	last_name	creation_date	updated_date	Postal_Code	Cardholder_Country	Card_status
+3fd41ae8-2d94-4b2b-94da-7677c67a6b00	John	Doe	2/7/2021 2:20:30	2/7/2021 2:20:30	50023	USA	active
+76ed7880-1f89-40b0-92a9-de8e31a1cf06	Jane	Doe	5/7/2021 9:16:05	5/7/2021 9:16:05	48476	USA	closed
+0b07386f-c7ad-4b38-add2-0488aed3a643	Bill	Davis	3/8/2021 2:20:30	3/8/2021 2:20:30	60021	USA	closed
+c7c8909f-cf60-4423-8c9e-4472f6a67a4e	Mary	Sue	2/6/2020 2:20:30	2/6/2020 2:20:30	64539	USA	active
+76ed7880-1f89-40b0-92a9-de8e31a1cf06	Jane	Doe	5/7/2021 9:16:05	1/7/2022 9:16:05	48476	USA	closed
+3fd41ae8-2d94-4b2b-94da-7677c67a6b00	John	Doe	2/7/2021 2:20:30	2/7/2022 2:20:30	50023	USA	active
+bd1f9bb3-51e0-48ce-bd21-489aff77c5b2	Elaine	Smith	3/14/2020 2:20:30	3/14/2020 2:20:30	20035	USA	closed
+65cf133d-8e32-41f3-bf87-96c718688d6b	Amy	Smith	10/9/2021 2:20:30	10/9/2021 2:20:30	36984	USA	closed
+fce69fd8-0748-4f12-865e-0d387eea8cc5	Bob	Doe	1/15/2022 2:20:30	1/15/2022 2:20:30	54789	USA	closed

@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  test:
+    image: "take-home"
+    volumes:
+      - .:/app
+    command: python3 -m pytest
+  run:
+    image: "take-home"
+    volumes:
+      - .:/app
+    command: /usr/local/spark/bin/spark-submit src/main.py

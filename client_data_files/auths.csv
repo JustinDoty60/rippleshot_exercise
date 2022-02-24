@@ -1,0 +1,28 @@
+,account_id,,Transmit Time,Transaction Type,Merchant Country,Amount,merchant_name
+,3fd41ae8-2d94-4b2b-94da-7677c67a6b00,,2/7/2022 2:20:30,debit,USA,44.33,amazon
+,76ed7880-1f89-40b0-92a9-de8e31a1cf06,,2/1/2022 2:20:30,debit,USA,5.44,google
+,0b07386f-c7ad-4b38-add2-0488aed3a643,,2/2/2022 2:20:30,credit,USA,76.50,walmrt
+,c7c8909f-cf60-4423-8c9e-4472f6a67a4e,,2/3/2022 2:20:30,credit,USA,4.23,target
+,76ed7880-1f89-40b0-92a9-de8e31a1cf06,,2/9/2022 2:20:30,debit,USA,1.23,target
+,3fd41ae8-2d94-4b2b-94da-7677c67a6b00,,2/1/2022 2:20:30,credit,USA,977.66,amzn
+,bd1f9bb3-51e0-48ce-bd21-489aff77c5b2,,2/5/2022 2:20:30,debit,USA,432.1,Home depot
+,65cf133d-8e32-41f3-bf87-96c718688d6b,,2/4/2022 2:20:30,debit,USA,33.00,Home depot
+,fce69fd8-0748-4f12-865e-0d387eea8cc5,,2/8/2022 2:20:30,debit,USA,12.00,amazon
+,3fd41ae8-2d94-4b2b-94da-7677c67a6b00,,2/2/2022 2:20:30,credit,USA,3.99,Home depot
+,76ed7880-1f89-40b0-92a9-de8e31a1cf06,,2/7/2022 2:20:30,credit,USA,19.99,walmart
+,0b07386f-c7ad-4b38-add2-0488aed3a643,,2/8/2022 2:20:30,credit,USA,23.11,target
+,c7c8909f-cf60-4423-8c9e-4472f6a67a4e,,2/3/2022 2:20:30,credit,USA,35.44,Cvs
+,76ed7880-1f89-40b0-92a9-de8e31a1cf06,,2/5/2022 2:20:30,debit,USA,8.11,Walgreens
+,3fd41ae8-2d94-4b2b-94da-7677c67a6b00,,2/9/2022 2:20:30,debit,USA,4.22,amazon
+,bd1f9bb3-51e0-48ce-bd21-489aff77c5b2,,2/7/2022 2:20:30,credit,USA,55.88,walmart
+,65cf133d-8e32-41f3-bf87-96c718688d6b,,2/2/2022 2:20:30,credit,USA,69.99,Walgreens
+,fce69fd8-0748-4f12-865e-0d387eea8cc5,,2/1/2022 2:20:30,debit,USA,12.11,google
+,3fd41ae8-2d94-4b2b-94da-7677c67a6b00,,2/7/2022 2:20:30,credit,USA,4.22,google
+,76ed7880-1f89-40b0-92a9-de8e31a1cf06,,2/8/2022 2:20:30,debit,USA,3.67,Cvs
+,0b07386f-c7ad-4b38-add2-0488aed3a643,,2/2/2022 2:20:30,debit,USA,3.23,target
+,c7c8909f-cf60-4423-8c9e-4472f6a67a4e,,2/3/2022 2:20:30,debit,USA,2.76,Walmrt
+,76ed7880-1f89-40b0-92a9-de8e31a1cf06,,2/4/2022 2:20:30,credit,USA,7.54,Cvs
+,3fd41ae8-2d94-4b2b-94da-7677c67a6b00,,2/5/2022 2:20:30,credit,USA,7.34,walmart
+,bd1f9bb3-51e0-48ce-bd21-489aff77c5b2,,2/6/2022 2:20:30,credit,USA,2.34,Walgreens
+,65cf133d-8e32-41f3-bf87-96c718688d6b,,2/7/2022 2:20:30,credit,USA,8.45,amazon
+,fce69fd8-0748-4f12-865e-0d387eea8cc5,,2/5/2022 2:20:30,credit,USA,3.67,Target
