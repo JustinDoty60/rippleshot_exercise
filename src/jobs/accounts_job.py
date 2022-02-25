@@ -87,7 +87,7 @@ def extract_accounts_data_from_source(spark: SparkSession) -> DataFrame:
 
 
 def extract_accounts_data_from_data_warehouse(spark: SparkSession) -> DataFrame:
-    '''Extracts data from the data warehouse in parquet format'''
+    '''Extracts accounts data from the data warehouse in parquet format'''
 
     file_path = data_warehouse_file_path
 
@@ -120,6 +120,7 @@ def load_accounts_data(df: DataFrame, spark: SparkSession) -> None:
 
     (
         df.write.partitionBy(partition_cols)
+            .option('schema', accounts_data_warehouse_schema)
             .mode('overwrite')
             .parquet(file_path)
     )

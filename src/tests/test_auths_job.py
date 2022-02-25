@@ -6,10 +6,11 @@ from jobs.auths_job import (
     rename_cols, 
     clean_merchant_name_col,
     add_partition_cols, 
+    union_data_warehouse,
     deduplicate_rows,
     DWColumns,
     source_cols,
-    data_warehouse_cols,
+    data_warehouse_cols as dw_cols,
     filtered_data_warehouse_cols,
     partition_cols
 )
@@ -148,7 +149,45 @@ def test_add_partition_cols(sql_context):
     assert data_test(expected_output, real_output)
 
 
+def test_union_data_warehouse(sql_context):
+
+    data_warehouse_cols = dw_cols.keys()
+
+    input_schema = data_warehouse_cols
+    input_data = [
+        ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon', 2022, 2, 7)
+    ]
+    
+    input = sql_context.createDataFrame(input_data).toDF(*input_schema)
+
+    dw_input_schema = data_warehouse_cols
+    dw_input_data = [
+        ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon', 2022, 2, 7),
+        ('76ed7880-1f89-40b0-92a9-de8e31a1cf06', '2/6/2022 2:20:30', 'debit', 'USA', 44.3, 'Cvs', 2022, 2, 6),
+        ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/8/2022 2:20:30', 'debit', 'USA', 44.0, 'Walgreens', 2022, 2, 8)
+    ]
+    
+    dw_input = sql_context.createDataFrame(dw_input_data).toDF(*dw_input_schema)
+
+    expected_schema = data_warehouse_cols
+    expected_data = [
+        ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon', 2022, 2, 7),
+        ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon', 2022, 2, 7),
+        ('76ed7880-1f89-40b0-92a9-de8e31a1cf06', '2/6/2022 2:20:30', 'debit', 'USA', 44.3, 'Cvs', 2022, 2, 6),
+        ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/8/2022 2:20:30', 'debit', 'USA', 44.0, 'Walgreens', 2022, 2, 8)
+    ]
+
+    expected_output = sql_context.createDataFrame(expected_data).toDF(*expected_schema)
+
+    real_output = union_data_warehouse(input, dw_input)
+
+    assert schema_test(expected_output, real_output)
+    assert data_test(expected_output, real_output)
+
+
 def test_deduplicate_rows(sql_context):
+
+    data_warehouse_cols = dw_cols.keys()
 
     input_schema = data_warehouse_cols
     input_data = [

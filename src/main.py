@@ -10,7 +10,7 @@ def main():
 
     # ETL for auths and accounts could be done in parallel
     auths_df = extract_auths_data(spark)
-    auths_df = transform_auths_data(auths_df)
+    auths_df = transform_auths_data(auths_df, spark)
     load_auths_data(auths_df)
 
     accounts_df = extract_accounts_data_from_source(spark)
