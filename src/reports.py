@@ -6,7 +6,7 @@ from jobs.accounts_job import DWColumns as accounts_DWColumns
 '''Methods that generates reports to .csv files. Can change in the future for another file type.'''
 
 def generate_amount_of_transactions_report(auths_df: DataFrame, accounts_df: DataFrame) -> None:
-    """Generates a report of how many transactions happened per account first name and last name, per day"""
+    '''Generates a report of how many transactions happened per account first name and last name, per day'''
 
     auths_account_id = auths_DWColumns.ACCOUNT_ID.value
     auths_transmit_time = auths_DWColumns.TRANSMIT_TIME.value
@@ -39,13 +39,15 @@ def generate_amount_of_transactions_report(auths_df: DataFrame, accounts_df: Dat
         'count as num_transactions'
     )
 
+    report_df = report_df.orderBy(col(auths_transmit_time).asc())
+
     write_report(report_df, 'amount_of_transactions_report')
 
     return None
 
 
 def generate_top_3_merchants_report(auths_df: DataFrame) -> None:
-    """Generates a report of the top 3 merchants by dollars spent"""
+    '''Generates a report of the top 3 merchants by dollars spent'''
 
     auths_merchant_name = auths_DWColumns.MERCHANT_NAME.value
     auths_amount = auths_DWColumns.AMOUNT.value
@@ -65,12 +67,12 @@ def generate_top_3_merchants_report(auths_df: DataFrame) -> None:
 
 
 def write_report(df: DataFrame, report_name: str) -> None:
-    """Writes a report out in CSV format"""
+    '''Writes a report out in CSV format'''
 
     (
         df.coalesce(1)
             .write.format('com.databricks.spark.csv')
-            .option("header", "true")
+            .option('header', 'true')
             .mode('overwrite')
-            .save(f"reports/{report_name}")
+            .save(f'reports/{report_name}')
     )

@@ -3,7 +3,7 @@ from pyspark.sql import SparkSession
 '''Library for spark related functions.'''
 
 def get_spark() -> SparkSession:
-    """Generates a SparkSession object"""
+    '''Generates a SparkSession object'''
     
     spark = (
         SparkSession

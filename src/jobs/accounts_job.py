@@ -33,7 +33,7 @@ source_cols = {
 }
 
 
-date_warehouse_cols = {
+data_warehouse_cols = {
     DWColumns.ACCOUNT_ID.value: StringType(),
     DWColumns.FIRST_NAME.value: StringType(),
     DWColumns.LAST_NAME.value: StringType(),
@@ -61,41 +61,60 @@ accounts_source_schema = (
 
 
 accounts_data_warehouse_schema = (
-    StructType([ StructField(k, v, False) for k,v in date_warehouse_cols.items() ])
+    StructType([ StructField(k, v, False) for k,v in data_warehouse_cols.items() ])
 )
+
+
+filtered_date_warehouse_cols = [k for k in data_warehouse_cols.keys() if k not in partition_cols]
 
 
 data_warehouse_file_path = 'data_warehouse/accounts'
 
 
-def extract_accounts_data(spark: SparkSession) -> DataFrame:
-    """Extracts data from accounts.tsv"""
+def extract_accounts_data_from_source(spark: SparkSession) -> DataFrame:
+    '''Extracts data from accounts.tsv'''
 
     file_path = 'client_data_files/accounts.tsv'
 
     return (
-        spark.read.format("csv")
+        spark.read.format('csv')
             .option('delimiter', '\t') # supports .tsv file
             .schema(accounts_source_schema)
             .option('Header', True)
-            .option("timestampFormat", "M/d/y H:m:s")
+            .option('timestampFormat', 'M/d/y H:m:s')
             .load(file_path)
     )
 
 
+def extract_accounts_data_from_data_warehouse(spark: SparkSession) -> DataFrame:
+    '''Extracts data from the data warehouse in parquet format'''
+
+    file_path = data_warehouse_file_path
+
+    return (
+        spark.read.schema(accounts_data_warehouse_schema)
+            .parquet(file_path)
+    )
+
+
 def transform_accounts_data(df: DataFrame, spark: SparkSession) -> DataFrame:
-    """Transforms the accounts data to fit the requirements"""
+    '''Transforms the accounts data to fit the requirements'''
 
     df = rename_cols(df)
     df = add_partition_cols(df)
-    df = union_existing_data_warehouse(df, spark)
+
+    dw_df = extract_accounts_data_from_data_warehouse(spark)
+    dw_df.cache() # allows read/write from the same parquet
+    dw_df.checkpoint() # workaround that allows us to evaluate the cache now
+
+    df = union_data_warehouse(df, dw_df)
     df = filter_to_latest_updated_records(df)
 
     return df
     
 
 def load_accounts_data(df: DataFrame, spark: SparkSession) -> None:
-    """Loads the accounts data in parquet format partitioned by year, month, and day"""
+    '''Loads the accounts data in parquet format partitioned by year, month, and day'''
 
     file_path = data_warehouse_file_path
 
@@ -109,37 +128,24 @@ def load_accounts_data(df: DataFrame, spark: SparkSession) -> None:
 
 
 def rename_cols(df: DataFrame) -> DataFrame:
-    """Renames the ingested source columns to conform to a naming standard"""
+    '''Renames the ingested source columns to conform to a naming standard'''
 
-    source_col_names = source_cols.keys()
-    filtered_date_warehouse_col_names = [k for k in date_warehouse_cols.keys() if k not in partition_cols]
-
-    for source_col_name, date_warehouse_col in zip(source_col_names, filtered_date_warehouse_col_names):
-        df = df.withColumnRenamed(source_col_name, date_warehouse_col)
+    for source_col, date_warehouse_col in zip(source_cols.keys(), filtered_date_warehouse_cols):
+        df = df.withColumnRenamed(source_col, date_warehouse_col)
 
     return df
 
 
-def union_existing_data_warehouse(df: DataFrame, spark: SparkSession) -> DataFrame:
-    """Unions the existing data warehouse with the current batch of data"""
+def union_data_warehouse(df: DataFrame, dw_df: DataFrame) -> DataFrame:
+    '''Unions the existing data warehouse with the current batch of data'''
 
-    file_path = data_warehouse_file_path
-
-    data_warehouse_df = spark.read.schema(accounts_data_warehouse_schema).parquet(file_path)
-
-    # allows read/write from the same parquet
-    data_warehouse_df.cache()
-
-    # workaround that allows us to evaluate the cache now
-    data_warehouse_df.checkpoint()
-
-    df = data_warehouse_df.union(df)
+    df = dw_df.union(df)
 
     return df
 
 
 def filter_to_latest_updated_records(df: DataFrame) -> DataFrame:
-    """Filters the data for an account to have 1 record representing the latest updated_date"""
+    '''Filters the data for an account to have 1 record representing the latest updated_date'''
 
     updated_date_col = DWColumns.UPDATED_DATE.value
     row_num_col = 'row_num'
@@ -157,7 +163,7 @@ def filter_to_latest_updated_records(df: DataFrame) -> DataFrame:
 
 
 def add_partition_cols(df: DataFrame) -> DataFrame:
-    """Adds the year, month, day partition cols"""
+    '''Adds the year, month, day partition cols'''
 
     timestamp_col = DWColumns.UPDATED_DATE.value
 
