@@ -52,13 +52,11 @@ def generate_top_3_merchants_report(auths_df: DataFrame) -> None:
     auths_cols = [auths_merchant_name, auths_amount]
 
     report_df = auths_df[auths_cols]
-
     report_df = report_df.groupBy(auths_merchant_name).sum(auths_amount)
 
     dollars_spent_col = 'dollars_spent'
 
     report_df = report_df.withColumnRenamed('sum(amount)', dollars_spent_col)
-
     report_df = report_df.orderBy(col(dollars_spent_col).desc()).limit(3)
 
     write_report(report_df, 'top_3_merchants_report')

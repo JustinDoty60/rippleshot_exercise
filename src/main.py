@@ -8,6 +8,7 @@ from reports import generate_amount_of_transactions_report, generate_top_3_merch
 def main():
     spark = get_spark()
 
+    # ETL for auths and accounts could be done in parallel
     auths_df = extract_auths_data(spark)
     auths_df = transform_auths_data(auths_df)
     load_auths_data(auths_df)

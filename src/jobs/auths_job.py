@@ -53,11 +53,11 @@ def extract_auths_data(spark: SparkSession) -> DataFrame:
     file_path = 'client_data_files/auths.csv'
 
     return (
-        spark.read.format("csv")
+        spark.read.format('csv')
             .option('delimiter', ',')
             .option('inferSchema', True) # not ideal, but a workaround for empty cols
             .option('Header', True)
-            .option("timestampFormat", "M/d/y H:m:s")
+            .option('timestampFormat', 'M/d/y H:m:s')
             .load(file_path)
     )
 
@@ -144,5 +144,5 @@ def add_partition_cols(df: DataFrame) -> DataFrame:
 
 def deduplicate_rows(df: DataFrame) -> DataFrame:
     """Deduplicates rows"""
-    
+
     return df.distinct()

@@ -133,7 +133,9 @@ def union_existing_data_warehouse(df: DataFrame, spark: SparkSession) -> DataFra
     # workaround that allows us to evaluate the cache now
     data_warehouse_df.checkpoint()
 
-    return data_warehouse_df.union(df)
+    df = data_warehouse_df.union(df)
+
+    return df
 
 
 def filter_to_latest_updated_records(df: DataFrame) -> DataFrame:
