@@ -1,14 +1,14 @@
 from pyspark.sql import SparkSession
 from pyspark.sql.dataframe import DataFrame
-from pyspark.sql.functions import col, year, month, dayofmonth, first
+from pyspark.sql.functions import col, year, month, dayofmonth, row_number
 from pyspark.sql.window import Window
 from pyspark.sql.types import StructType, StructField, StringType, IntegerType, TimestampType
 from enum import Enum
 
 '''ETL logic for accounts job'''
 
-class Columns(Enum):
-    ACCOUNT_ID = 'acount_id'
+class DWColumns(Enum):
+    ACCOUNT_ID = 'account_id'
     FIRST_NAME = 'first_name'
     LAST_NAME = 'last_name'
     CREATION_DATE = 'creation_date'
@@ -21,7 +21,7 @@ class Columns(Enum):
     DAY = 'day'
 
 
-initial_cols = {
+source_cols = {
     'account_id': StringType(),
     'first_name': StringType(),
     'last_name': StringType(),
@@ -33,62 +33,75 @@ initial_cols = {
 }
 
 
-renamed_cols = [
-    Columns.ACCOUNT_ID.value,
-    Columns.FIRST_NAME.value,
-    Columns.LAST_NAME.value,
-    Columns.CREATION_DATE.value,
-    Columns.UPDATED_DATE.value,
-    Columns.POSTAL_CODE.value,
-    Columns.CARDHOLDER_COUNTRY.value,
-    Columns.CARD_STATUS.value
+date_warehouse_cols = {
+    DWColumns.ACCOUNT_ID.value: StringType(),
+    DWColumns.FIRST_NAME.value: StringType(),
+    DWColumns.LAST_NAME.value: StringType(),
+    DWColumns.CREATION_DATE.value: TimestampType(),
+    DWColumns.UPDATED_DATE.value: TimestampType(),
+    DWColumns.POSTAL_CODE.value: IntegerType(),
+    DWColumns.CARDHOLDER_COUNTRY.value: StringType(),
+    DWColumns.CARD_STATUS.value: StringType(),
+    DWColumns.YEAR.value: IntegerType(),
+    DWColumns.MONTH.value: IntegerType(),
+    DWColumns.DAY.value: IntegerType()
+}
+
+
+partition_cols = [
+    DWColumns.YEAR.value,
+    DWColumns.MONTH.value,
+    DWColumns.DAY.value
 ]
 
 
-def extract_accounts_data(spark: SparkSession) -> DataFrame:
-    """Extracts data from accounts.tsv
-    :param spark: Spark session object
-    :return: Spark DataFrame
-    """
-    file_path = 'client_data_files/accounts.tsv'
+accounts_source_schema = (
+    StructType([ StructField(k, v, False) for k,v in source_cols.items() ])
+)
 
-    accounts_schema = (
-        StructType([ StructField(k, v, True) for k,v in initial_cols.items() ])
-    )
+
+accounts_data_warehouse_schema = (
+    StructType([ StructField(k, v, False) for k,v in date_warehouse_cols.items() ])
+)
+
+
+data_warehouse_file_path = 'data_warehouse/accounts'
+
+
+def extract_accounts_data(spark: SparkSession) -> DataFrame:
+    """Extracts data from accounts.tsv"""
+
+    file_path = 'client_data_files/accounts.tsv'
 
     return (
         spark.read.format("csv")
             .option('delimiter', '\t') # supports .tsv file
-            .schema(accounts_schema)
+            .schema(accounts_source_schema)
             .option('Header', True)
             .option("timestampFormat", "M/d/y H:m:s")
             .load(file_path)
     )
 
 
-def transform_accounts_data(df: DataFrame) -> DataFrame:
-    """Transforms the accounts data to fit the requirements
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
+def transform_accounts_data(df: DataFrame, spark: SparkSession) -> DataFrame:
+    """Transforms the accounts data to fit the requirements"""
+
     df = rename_cols(df)
-    df = filter_to_latest_updated_records(df)
     df = add_partition_cols(df)
-    df = deduplicate_rows(df)
+    df = union_existing_data_warehouse(df, spark)
+    df = filter_to_latest_updated_records(df)
 
     return df
     
 
-def load_accounts_data(df: DataFrame) -> None:
-    """Loads the accounts data in parquet format partitioned by year, month, and day
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    file_path = 'data_warehouse/accounts'
+def load_accounts_data(df: DataFrame, spark: SparkSession) -> None:
+    """Loads the accounts data in parquet format partitioned by year, month, and day"""
+
+    file_path = data_warehouse_file_path
 
     (
-        df.write.partitionBy('year', 'month', 'day')
-            .mode('append')
+        df.write.partitionBy(partition_cols)
+            .mode('overwrite')
             .parquet(file_path)
     )
 
@@ -96,53 +109,58 @@ def load_accounts_data(df: DataFrame) -> None:
 
 
 def rename_cols(df: DataFrame) -> DataFrame:
-    """Renames the ingested columns to conform to a naming standard
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    for initial_col, renamed_col in zip(initial_cols, renamed_cols):
-        df = df.withColumnRenamed(initial_col, renamed_col)
+    """Renames the ingested source columns to conform to a naming standard"""
+
+    source_col_names = source_cols.keys()
+    filtered_date_warehouse_col_names = [k for k in date_warehouse_cols.keys() if k not in partition_cols]
+
+    for source_col_name, date_warehouse_col in zip(source_col_names, filtered_date_warehouse_col_names):
+        df = df.withColumnRenamed(source_col_name, date_warehouse_col)
+
+    return df
+
+
+def union_existing_data_warehouse(df: DataFrame, spark: SparkSession) -> DataFrame:
+    """Unions the existing data warehouse with the current batch of data"""
+
+    file_path = data_warehouse_file_path
+
+    data_warehouse_df = spark.read.schema(accounts_data_warehouse_schema).parquet(file_path)
+
+    # allows read/write from the same parquet
+    data_warehouse_df.cache()
+
+    # workaround that allows us to evaluate the cache now
+    data_warehouse_df.checkpoint()
+
+    return data_warehouse_df.union(df)
+
+
+def filter_to_latest_updated_records(df: DataFrame) -> DataFrame:
+    """Filters the data for an account to have 1 record representing the latest updated_date"""
+
+    updated_date_col = DWColumns.UPDATED_DATE.value
+    row_num_col = 'row_num'
+
+    window = (
+        Window.partitionBy(DWColumns.ACCOUNT_ID.value)
+            .orderBy(col(updated_date_col).desc())
+    )
+
+    df = df.withColumn(row_num_col, row_number().over(window))
+    df = df.where(col(row_num_col) == 1)
+    df = df.drop(row_num_col)
 
     return df
 
 
 def add_partition_cols(df: DataFrame) -> DataFrame:
-    """Adds the year, month, day partition cols
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    timestamp_col = Columns.UPDATED_DATE.value
+    """Adds the year, month, day partition cols"""
 
-    df = df.withColumn('year', year(col(timestamp_col)))
-    df = df.withColumn('month', month(col(timestamp_col)))
-    df = df.withColumn('day', dayofmonth(col(timestamp_col)))
+    timestamp_col = DWColumns.UPDATED_DATE.value
+
+    df = df.withColumn(DWColumns.YEAR.value, year(col(timestamp_col)))
+    df = df.withColumn(DWColumns.MONTH.value, month(col(timestamp_col)))
+    df = df.withColumn(DWColumns.DAY.value, dayofmonth(col(timestamp_col)))
 
     return df
-
-
-def filter_to_latest_updated_records(df: DataFrame) -> DataFrame:
-    """Filters the data for an account to have 1 record representing the latest updated_date
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    timestamp_col = Columns.UPDATED_DATE.value
-    max_timstamp_col = 'max_ts'
-
-    window = (
-        Window.partitionBy(Columns.ACCOUNT_ID.value)
-            .orderBy(col(timestamp_col).desc())
-    )
-
-    df = df.withColumn(max_timstamp_col, first(timestamp_col).over(window))
-    df = df.where(col(max_timstamp_col) == col(timestamp_col))
-    df = df.drop(max_timstamp_col)
-
-    return df
-
-
-def deduplicate_rows(df: DataFrame) -> DataFrame:
-    """Deduplicates rows
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    return df.distinct()

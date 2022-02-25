@@ -5,8 +5,8 @@ from enum import Enum
 
 '''ETL logic for auths job'''
 
-class Columns(Enum):
-    ACCOUNT_ID = 'acount_id'
+class DWColumns(Enum):
+    ACCOUNT_ID = 'account_id'
     TRANSMIT_TIME = 'transmit_time'
     TRANSACTION_TYPE = 'transaction_type'
     MERCHANT_COUNTRY = 'merchant_country'
@@ -17,7 +17,7 @@ class Columns(Enum):
     DAY = 'day'
 
 
-initial_cols = [
+source_cols = [
     'account_id',
     'Transmit Time',
     'Transaction Type',
@@ -27,21 +27,29 @@ initial_cols = [
 ]
 
 
-renamed_cols = [
-    Columns.ACCOUNT_ID.value,
-    Columns.TRANSMIT_TIME.value,
-    Columns.TRANSACTION_TYPE.value,
-    Columns.MERCHANT_COUNTRY.value,
-    Columns.AMOUNT.value,
-    Columns.MERCHANT_NAME.value
+data_warehouse_cols = [
+    DWColumns.ACCOUNT_ID.value,
+    DWColumns.TRANSMIT_TIME.value,
+    DWColumns.TRANSACTION_TYPE.value,
+    DWColumns.MERCHANT_COUNTRY.value,
+    DWColumns.AMOUNT.value,
+    DWColumns.MERCHANT_NAME.value,
+    DWColumns.YEAR.value,
+    DWColumns.MONTH.value,
+    DWColumns.DAY.value
+]
+
+
+partition_cols = [
+    DWColumns.YEAR.value,
+    DWColumns.MONTH.value,
+    DWColumns.DAY.value
 ]
 
 
 def extract_auths_data(spark: SparkSession) -> DataFrame:
-    """Extracts data from auths.csv
-    :param spark: Spark session object
-    :return: Spark DataFrame
-    """
+    """Extracts data from auths.csv"""
+
     file_path = 'client_data_files/auths.csv'
 
     return (
@@ -55,10 +63,8 @@ def extract_auths_data(spark: SparkSession) -> DataFrame:
 
 
 def transform_auths_data(df: DataFrame) -> DataFrame:
-    """Transforms the auths data to fit the requirements
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
+    """Transforms the auths data to fit the requirements"""
+
     df = remove_empty_cols(df)
     df = rename_cols(df)
     df = clean_merchant_name_col(df)
@@ -69,14 +75,12 @@ def transform_auths_data(df: DataFrame) -> DataFrame:
     
 
 def load_auths_data(df: DataFrame) -> None:
-    """Loads the auths data in parquet format partitioned by year, month, and day
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
+    """Loads the auths data in parquet format partitioned by year, month, and day"""
+
     file_path = 'data_warehouse/auths'
 
     (
-        df.write.partitionBy('year', 'month', 'day')
+        df.write.partitionBy(partition_cols)
             .mode('append')
             .parquet(file_path)
     )
@@ -85,29 +89,25 @@ def load_auths_data(df: DataFrame) -> None:
 
 
 def remove_empty_cols(df: DataFrame) -> DataFrame:
-    """Removes the empty cols that were ingested
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    return df.select(*initial_cols)
+    """Removes the empty cols that were ingested"""
+
+    return df.select(*source_cols)
 
 
 def rename_cols(df: DataFrame) -> DataFrame:
-    """Renames the ingested columns to conform to a naming standard
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    for initial_col, renamed_col in zip(initial_cols, renamed_cols):
+    """Renames the ingested source columns to conform to a naming standard"""
+
+    filtered_date_warehouse_cols = [col for col in data_warehouse_cols if col not in partition_cols]
+
+    for initial_col, renamed_col in zip(source_cols, filtered_date_warehouse_cols):
         df = df.withColumnRenamed(initial_col, renamed_col)
 
     return df
 
 
 def clean_merchant_name_col(df: DataFrame) -> DataFrame:
-    """Renames merchant_name data to conform to a naming standard
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
+    """Renames merchant_name data to conform to a naming standard"""
+
     walmart_vals = ['walmrt', 'walmart', 'Walmrt']
     target_vals = ['target', 'Target']
     google_vals = ['google']
@@ -131,22 +131,18 @@ def clean_merchant_name_col(df: DataFrame) -> DataFrame:
 
 
 def add_partition_cols(df: DataFrame) -> DataFrame:
-    """Adds the year, month, day partition cols
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
-    timestamp_col = Columns.TRANSMIT_TIME.value
+    """Adds the year, month, day partition cols"""
 
-    df = df.withColumn('year', year(col(timestamp_col)))
-    df = df.withColumn('month', month(col(timestamp_col)))
-    df = df.withColumn('day', dayofmonth(col(timestamp_col)))
+    timestamp_col = DWColumns.TRANSMIT_TIME.value
+
+    df = df.withColumn(DWColumns.YEAR.value, year(col(timestamp_col)))
+    df = df.withColumn(DWColumns.MONTH.value, month(col(timestamp_col)))
+    df = df.withColumn(DWColumns.DAY.value, dayofmonth(col(timestamp_col)))
 
     return df
 
 
 def deduplicate_rows(df: DataFrame) -> DataFrame:
-    """Deduplicates rows
-    :param df: Spark DataFrame
-    :return: Spark DataFrame
-    """
+    """Deduplicates rows"""
+    
     return df.distinct()
