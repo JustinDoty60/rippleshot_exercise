@@ -59,7 +59,7 @@ filtered_data_warehouse_cols = [c for c in data_warehouse_cols.keys() if c not i
 data_warehouse_file_path = 'data_warehouse/auths'
 
 
-def extract_auths_data(spark: SparkSession) -> DataFrame:
+def extract_auths_data_from_source(spark: SparkSession) -> DataFrame:
     '''Extracts data from auths.csv'''
 
     file_path = 'client_data_files/auths.csv'

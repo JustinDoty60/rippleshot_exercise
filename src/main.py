@@ -1,5 +1,5 @@
 from spark import get_spark
-from jobs.auths_job import extract_auths_data, transform_auths_data, load_auths_data
+from jobs.auths_job import extract_auths_data_from_source, transform_auths_data, load_auths_data
 from jobs.accounts_job import extract_accounts_data_from_source, transform_accounts_data, load_accounts_data
 from reports import generate_amount_of_transactions_report, generate_top_3_merchants_report
 
@@ -9,7 +9,7 @@ def main():
     spark = get_spark()
 
     # ETL for auths and accounts could be done in parallel
-    auths_df = extract_auths_data(spark)
+    auths_df = extract_auths_data_from_source(spark)
     auths_df = transform_auths_data(auths_df, spark)
     load_auths_data(auths_df)
 

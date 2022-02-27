@@ -2,6 +2,8 @@ from pyspark.sql.functions import to_timestamp, col
 from tests.helpers import schema_test, data_test
 from pyspark.sql.types import IntegerType, TimestampType
 from jobs.auths_job import (
+    extract_auths_data_from_source,
+    extract_auths_data_from_data_warehouse,
     remove_empty_cols, 
     rename_cols, 
     clean_merchant_name_col,
@@ -18,21 +20,35 @@ from jobs.auths_job import (
 '''Pytest script for auths_job'''
 
 
-def test_remove_empty_cols(sql_context):
+def test_extract_auths_data_from_source(spark_session):
+
+    df = extract_auths_data_from_source(spark_session)
+
+    assert df
+
+
+def test_extract_auths_data_from_data_warehouse(spark_session):
+
+    df = extract_auths_data_from_data_warehouse(spark_session)
+
+    assert df
+
+
+def test_remove_empty_cols(spark_session):
 
     input_schema = source_cols + ['col_1', 'col_2']
     input_data = [
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon', 'cv_1', 'cv_2')
     ]
     
-    input = sql_context.createDataFrame(input_data).toDF(*input_schema)
+    input = spark_session.createDataFrame(input_data).toDF(*input_schema)
 
     expected_schema = source_cols
     expected_data = [
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon')
     ]
 
-    expected_output = sql_context.createDataFrame(expected_data).toDF(*expected_schema)
+    expected_output = spark_session.createDataFrame(expected_data).toDF(*expected_schema)
 
     real_output = remove_empty_cols(input)
 
@@ -40,21 +56,21 @@ def test_remove_empty_cols(sql_context):
     assert data_test(expected_output, real_output)
 
 
-def test_rename_cols(sql_context):
+def test_rename_cols(spark_session):
 
     input_schema = source_cols
     input_data = [
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon')
     ]
     
-    input = sql_context.createDataFrame(input_data).toDF(*input_schema)
+    input = spark_session.createDataFrame(input_data).toDF(*input_schema)
 
     expected_schema = filtered_data_warehouse_cols
     expected_data = [
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon')
     ]
 
-    expected_output = sql_context.createDataFrame(expected_data).toDF(*expected_schema)
+    expected_output = spark_session.createDataFrame(expected_data).toDF(*expected_schema)
 
     real_output = rename_cols(input)
 
@@ -62,7 +78,7 @@ def test_rename_cols(sql_context):
     assert data_test(expected_output, real_output)
 
 
-def test_clean_merchant_name_col(sql_context):
+def test_clean_merchant_name_col(spark_session):
 
     input_schema = [DWColumns.MERCHANT_NAME.value]
     input_data = [
@@ -79,7 +95,7 @@ def test_clean_merchant_name_col(sql_context):
         ('Cvs')
     ]
     
-    input = sql_context.createDataFrame(input_data, 'string').toDF(*input_schema)
+    input = spark_session.createDataFrame(input_data, 'string').toDF(*input_schema)
 
     expected_schema = [DWColumns.MERCHANT_NAME.value]
     expected_data = [
@@ -96,7 +112,7 @@ def test_clean_merchant_name_col(sql_context):
         ('cvs')
     ]
 
-    expected_output = sql_context.createDataFrame(expected_data, 'string').toDF(*expected_schema)
+    expected_output = spark_session.createDataFrame(expected_data, 'string').toDF(*expected_schema)
 
     real_output = clean_merchant_name_col(input)
 
@@ -104,7 +120,7 @@ def test_clean_merchant_name_col(sql_context):
     assert data_test(expected_output, real_output)
 
 
-def test_add_partition_cols(sql_context):
+def test_add_partition_cols(spark_session):
 
     timestamp_col = DWColumns.TRANSMIT_TIME.value
     timestamp_format = 'M/d/y H:m:s'
@@ -117,7 +133,7 @@ def test_add_partition_cols(sql_context):
         ('2/8/2022 2:20:30')
     ]
     
-    input = sql_context.createDataFrame(input_data, 'string').toDF(*input_schema)
+    input = spark_session.createDataFrame(input_data, 'string').toDF(*input_schema)
     input = input.withColumn(
         timestamp_col, 
         to_timestamp(timestamp_col, timestamp_format)
@@ -131,7 +147,7 @@ def test_add_partition_cols(sql_context):
         ('2/8/2022 2:20:30', 2022, 2, 8)
     ]
 
-    expected_output = sql_context.createDataFrame(expected_data).toDF(*expected_schema)
+    expected_output = spark_session.createDataFrame(expected_data).toDF(*expected_schema)
     expected_output = expected_output.withColumn(
         timestamp_col, 
         to_timestamp(timestamp_col, timestamp_format)
@@ -149,7 +165,7 @@ def test_add_partition_cols(sql_context):
     assert data_test(expected_output, real_output)
 
 
-def test_union_data_warehouse(sql_context):
+def test_union_data_warehouse(spark_session):
 
     data_warehouse_cols = dw_cols.keys()
 
@@ -158,7 +174,7 @@ def test_union_data_warehouse(sql_context):
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/7/2022 2:20:30', 'debit', 'USA', 44.33, 'amazon', 2022, 2, 7)
     ]
     
-    input = sql_context.createDataFrame(input_data).toDF(*input_schema)
+    input = spark_session.createDataFrame(input_data).toDF(*input_schema)
 
     dw_input_schema = data_warehouse_cols
     dw_input_data = [
@@ -167,7 +183,7 @@ def test_union_data_warehouse(sql_context):
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/8/2022 2:20:30', 'debit', 'USA', 44.0, 'Walgreens', 2022, 2, 8)
     ]
     
-    dw_input = sql_context.createDataFrame(dw_input_data).toDF(*dw_input_schema)
+    dw_input = spark_session.createDataFrame(dw_input_data).toDF(*dw_input_schema)
 
     expected_schema = data_warehouse_cols
     expected_data = [
@@ -177,7 +193,7 @@ def test_union_data_warehouse(sql_context):
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/8/2022 2:20:30', 'debit', 'USA', 44.0, 'Walgreens', 2022, 2, 8)
     ]
 
-    expected_output = sql_context.createDataFrame(expected_data).toDF(*expected_schema)
+    expected_output = spark_session.createDataFrame(expected_data).toDF(*expected_schema)
 
     real_output = union_data_warehouse(input, dw_input)
 
@@ -185,7 +201,7 @@ def test_union_data_warehouse(sql_context):
     assert data_test(expected_output, real_output)
 
 
-def test_deduplicate_rows(sql_context):
+def test_deduplicate_rows(spark_session):
 
     data_warehouse_cols = dw_cols.keys()
 
@@ -197,7 +213,7 @@ def test_deduplicate_rows(sql_context):
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/8/2022 2:20:30', 'debit', 'USA', 44.0, 'Walgreens', 2022, 2, 8)
     ]
     
-    input = sql_context.createDataFrame(input_data).toDF(*input_schema)
+    input = spark_session.createDataFrame(input_data).toDF(*input_schema)
 
     expected_schema = data_warehouse_cols
     expected_data = [
@@ -206,7 +222,7 @@ def test_deduplicate_rows(sql_context):
         ('3fd41ae8-2d94-4b2b-94da-7677c67a6b00', '2/8/2022 2:20:30', 'debit', 'USA', 44.0, 'Walgreens', 2022, 2, 8)
     ]
 
-    expected_output = sql_context.createDataFrame(expected_data).toDF(*expected_schema)
+    expected_output = spark_session.createDataFrame(expected_data).toDF(*expected_schema)
 
     real_output = deduplicate_rows(input)
 
